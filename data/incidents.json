@@ -1,0 +1,122 @@
+[
+  {
+    "incident_id": "INC-0001",
+    "service": "payments-api",
+    "failure_family": "database_connection_pool_exhaustion",
+    "symptom": "HTTP 500 spike to 42%, p99 latency jumped from 120ms to 7800ms during morning settlement batch",
+    "error_signature": "ConnectionPoolTimeoutError: pool exhausted after 30000ms (max_connections=10, active=10, waiting=142)",
+    "root_cause": "Database connection pool size was capped at default 10 connections, while batch settlement job spawned 32 concurrent worker threads holding transactions open.",
+    "fix_applied": "Increased max pool size to 50, lowered connectionTimeout to 10000ms, and added circuit breaker tripping on 5 consecutive pool exhaustion timeouts.",
+    "timestamp": "2026-09-20T03:14:00Z"
+  },
+  {
+    "incident_id": "INC-0002",
+    "service": "auth-service",
+    "failure_family": "memory_leak_oom",
+    "symptom": "Kubernetes Pod crash looping with exit code 137 (OOMKilled), restart count climbing every 45 minutes",
+    "error_signature": "NodeOOMAlert: container auth-service killed by cgroup memory limit 512Mi (RSS reached 528MiB)",
+    "root_cause": "JWT token revocation blacklist cache was implemented using an unbounded in-memory JavaScript Map without TTL or eviction, leaking 20MB/hour.",
+    "fix_applied": "Replaced unbounded Map with Redis-backed token cache with 15-minute TTL, and added liveness probe checking heap limit.",
+    "timestamp": "2026-09-21T08:22:00Z"
+  },
+  {
+    "incident_id": "INC-0003",
+    "service": "notifications-worker",
+    "failure_family": "misconfigured_environment_variable",
+    "symptom": "CrashLoopBackOff immediately after deployment of release v2.4.1; 0 messages processed from SQS queue",
+    "error_signature": "KeyError: 'RABBITMQ_AMQP_URL' not found in environment; Application failed to bootstrap within 30s",
+    "root_cause": "Helm chart deployment config renamed 'RABBITMQ_URL' to 'RABBITMQ_AMQP_URL', but Kubernetes secret mapping was not updated in staging/prod manifests.",
+    "fix_applied": "Updated Kubernetes ConfigMap secretKeyRef to expose RABBITMQ_AMQP_URL and added pre-start schema validation script.",
+    "timestamp": "2026-09-22T14:05:00Z"
+  },
+  {
+    "incident_id": "INC-0004",
+    "service": "api-gateway",
+    "failure_family": "downstream_cascading_timeout",
+    "symptom": "Global 504 Gateway Timeout across all public web traffic; gateway CPU at 95% due to thousands of pending socket handles",
+    "error_signature": "UpstreamTimeout: payments-api upstream connection timed out after 15000ms on route /v1/checkout/charge",
+    "root_cause": "payments-api slowdown caused incoming requests to queue in Envoy gateway workers without deadline propagation or load shedding.",
+    "fix_applied": "Configured Envoy downstream circuit breaker with max_pending_requests=200, reduced upstream request timeout to 3000ms, and enabled adaptive rate limiting.",
+    "timestamp": "2026-09-23T19:40:00Z"
+  },
+  {
+    "incident_id": "INC-0005",
+    "service": "audit-logger",
+    "failure_family": "disk_space_exhaustion",
+    "symptom": "Pod in Evicted status: 'The node was low on resource: ephemeral-storage. Container audit-logger was using 19.8GiB'",
+    "error_signature": "DiskFullError: [Errno 28] No space left on device: '/var/log/audit/transactions.log'",
+    "root_cause": "logrotate cron daemon failed due to a missing semicolon in logrotate.d/audit config, causing audit logs to grow unchecked for 14 days.",
+    "fix_applied": "Fixed syntax error in logrotate.d/audit config, enabled daily log rotation with gzip compression and maxsize 500M, and mounted logs to dedicated PVC.",
+    "timestamp": "2026-09-24T06:15:00Z"
+  },
+  {
+    "incident_id": "INC-0006",
+    "service": "orders-api",
+    "failure_family": "database_connection_pool_exhaustion",
+    "symptom": "Checkout service failing during flash sale, checkout latency spiking to 8.2s, 500 errors on POST /orders",
+    "error_signature": "ConnectionPoolTimeoutError: pool exhausted after 30000ms in orders-db-pool (active=20, max=20)",
+    "root_cause": "Order checkout flow holds connection open while synchronously awaiting inventory reservation call over HTTP.",
+    "fix_applied": "Adapted fix from INC-0001: Scaled HikariCP pool to 60, moved inventory call outside DB transaction block, and added Resilience4j circuit breaker.",
+    "timestamp": "2026-09-25T11:00:00Z"
+  },
+  {
+    "incident_id": "INC-0007",
+    "service": "analytics-worker",
+    "failure_family": "memory_leak_oom",
+    "symptom": "Worker pod killed by cgroup OOM after running continuous daily aggregation batch for 6 hours",
+    "error_signature": "NodeOOMAlert: container analytics-worker killed by cgroup memory limit 1024Mi (exit code 137)",
+    "root_cause": "Pandas DataFrame concatenation inside batch consumer loop accumulated unreclaimed memory chunks without calling garbage collection or batch chunking.",
+    "fix_applied": "Adapted fix from INC-0002: Refactored batch loop to use chunked streaming (chunksize=5000), explicitly invoked gc.collect(), and added memory ceiling monitor.",
+    "timestamp": "2026-09-25T16:30:00Z"
+  },
+  {
+    "incident_id": "INC-0008",
+    "service": "billing-service",
+    "failure_family": "misconfigured_environment_variable",
+    "symptom": "Billing worker pods crash looping immediately after config deployment, unable to decrypt customer cards",
+    "error_signature": "KeyError: 'STRIPE_WEBHOOK_SECRET' environment variable missing; bootstrap failed",
+    "root_cause": "Stripe API keys were updated in AWS Secrets Manager but secret key name was changed without syncing the Kubernetes ExternalSecret CRD.",
+    "fix_applied": "Adapted fix from INC-0003: Corrected ExternalSecret mapping key, redeployed ExternalSecret CRD, and added startup sanity validator.",
+    "timestamp": "2026-09-26T04:10:00Z"
+  },
+  {
+    "incident_id": "INC-0009",
+    "service": "order-fulfillment-api",
+    "failure_family": "downstream_cascading_timeout",
+    "symptom": "Warehouse shipping worker threads blocked; HTTP 504 propagating to frontend dispatch dashboard",
+    "error_signature": "UpstreamTimeout: shipping-carrier-api upstream connection timed out after 20000ms on /v2/labels/generate",
+    "root_cause": "External shipping partner carrier API experienced degraded performance, exhausting local worker pool waiting on HTTP responses.",
+    "fix_applied": "Adapted fix from INC-0004: Added bulkhead pattern with dedicated thread pool for carrier API, reduced timeout to 4000ms, and enabled asynchronous queue retry.",
+    "timestamp": "2026-09-26T13:45:00Z"
+  },
+  {
+    "incident_id": "INC-0010",
+    "service": "legacy-sync-worker",
+    "failure_family": "disk_space_exhaustion",
+    "symptom": "Disk write failure on worker node; ephemeral storage exceeded limit 10GiB",
+    "error_signature": "DiskFullError: [Errno 28] No space left on device: '/tmp/sync_chunks/dump_chunk_9942.csv'",
+    "root_cause": "Data sync job wrote temporary CSV export chunks to /tmp without cleanup on error handling path.",
+    "fix_applied": "Adapted fix from INC-0005: Added try-finally cleanup blocks ensuring temp files are deleted, added cron job to purge /tmp files older than 2 hours.",
+    "timestamp": "2026-09-26T22:10:00Z"
+  },
+  {
+    "incident_id": "INC-0011",
+    "service": "payments-api",
+    "failure_family": "database_connection_pool_exhaustion",
+    "symptom": "Recurrent 500 error spike during month-end billing cycle; latency > 6s",
+    "error_signature": "ConnectionPoolTimeoutError: pool exhausted after 30000ms in payments-api",
+    "root_cause": "Month-end billing triggered concurrent billing runs exceeding old pool settings.",
+    "fix_applied": "Instantly applied known fix from INC-0001: Scaled DB pool to 50 and activated circuit breaker.",
+    "timestamp": "2026-09-27T01:00:00Z"
+  },
+  {
+    "incident_id": "INC-0012",
+    "service": "auth-service",
+    "failure_family": "memory_leak_oom",
+    "symptom": "Auth pods crashing again under load with exit code 137 (OOMKilled)",
+    "error_signature": "NodeOOMAlert: container auth-service killed by cgroup memory limit 512Mi",
+    "root_cause": "Session token cache memory exhaustion.",
+    "fix_applied": "Instantly applied known fix from INC-0002: Restarted deployment, ensured Redis token cache eviction TTL is active.",
+    "timestamp": "2026-09-27T05:30:00Z"
+  }
+]
