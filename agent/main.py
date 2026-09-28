@@ -181,12 +181,26 @@ class IncidentResponseAgent:
 
         query = f"{service} {error_sig} {symptom}".strip()
 
-        # Step A: Check Hindsight Memory Bank
+        # Step A: Check Hindsight Memory Bank (Primary Service-Aware Query)
         raw_recall = self.hindsight.recall(query=query)
         matches = self.hindsight.recall_incident_matches(query=query, response=raw_recall)
         prompt_string = raw_recall.to_prompt_string()
 
         match_classification, top_match, relevant_matches = self.evaluate_memory_matches(matches, service)
+
+        # Cross-service fallback recall: if primary recall returns no usable matches,
+        # query by failure family (error signature + symptoms) without the service name
+        if match_classification == "no_match":
+            family_query = f"{error_sig} {symptom}".strip()
+            if family_query and family_query != query:
+                fb_raw_recall = self.hindsight.recall(query=family_query)
+                fb_matches = self.hindsight.recall_incident_matches(query=family_query, response=fb_raw_recall)
+                fb_classification, fb_top_match, fb_relevant = self.evaluate_memory_matches(fb_matches, service)
+                if fb_classification != "no_match":
+                    match_classification = fb_classification
+                    top_match = fb_top_match
+                    relevant_matches = fb_relevant
+                    prompt_string = fb_raw_recall.to_prompt_string()
 
         # 1. FAST PATH: Strong Match in Memory (Exact recurrence)
         if match_classification == "strong_match":
