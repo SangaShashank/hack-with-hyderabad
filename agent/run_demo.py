@@ -79,8 +79,10 @@ def run_demo_narrative(bank_id: str = "demo-narrative-live"):
 
     print("\n" + "=" * 80)
     print("✅ DEMO SEQUENCE COMPLETED SUCCESSFULLY!")
-    print(f"Final Count of Incidents Accelerated by Hindsight Memory: {agent.instantly_resolved_count}/5")
-    print(f"Final Count of Cross-Service Pattern Adaptations: {agent.pattern_adapted_count}")
+    print(f"Fast Memory Resolutions: {agent.instantly_resolved_count}/5")
+    print(f"Pattern Adaptations Across Services: {agent.pattern_adapted_count}/5")
+    print(f"Novel Diagnoses Reasoned & Learned: {agent.slow_diagnosed_count}/5")
+    print(f"Total Incidents Processed: {agent.instantly_resolved_count + agent.pattern_adapted_count + agent.slow_diagnosed_count}/5")
     print("=" * 80)
 
 

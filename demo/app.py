@@ -2,6 +2,8 @@ import sys
 import os
 import json
 import time
+import uuid
+import datetime
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import urllib.parse
 
@@ -87,6 +89,38 @@ class DemoServerHandler(BaseHTTPRequestHandler):
         if path == "/api/handle_incident":
             try:
                 incident_data = json.loads(body)
+                if not isinstance(incident_data, dict):
+                    self._set_headers(status=400)
+                    self.wfile.write(json.dumps({"error": "Payload must be a JSON object"}).encode("utf-8"))
+                    return
+
+                service = str(incident_data.get("service") or "").strip()
+                error_sig = str(incident_data.get("error_signature") or "").strip()
+                symptom = str(incident_data.get("symptom") or incident_data.get("symptoms") or "").strip()
+
+                if not service or not error_sig or not symptom:
+                    self._set_headers(status=400)
+                    self.wfile.write(json.dumps({
+                        "error": "Validation failed: 'service', 'error_signature', and 'symptoms' (or 'symptom') are required fields."
+                    }).encode("utf-8"))
+                    return
+
+                # Auto-generate unique collision-free ID if not provided
+                if not incident_data.get("incident_id"):
+                    ts_tag = datetime.datetime.utcnow().strftime("%Y%m%d%H%M%S")
+                    rand_tag = uuid.uuid4().hex[:6].upper()
+                    incident_data["incident_id"] = f"USER-{ts_tag}-{rand_tag}"
+
+                # Ensure normalized fields
+                incident_data["service"] = service
+                incident_data["error_signature"] = error_sig
+                incident_data["symptom"] = symptom
+                incident_data["symptoms"] = symptom
+
+                # Auto-generate timestamp if missing
+                if not incident_data.get("timestamp"):
+                    incident_data["timestamp"] = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+
                 result = AGENT.handle_incident(incident_data)
                 self._set_headers(status=200)
                 self.wfile.write(json.dumps(result).encode("utf-8"))

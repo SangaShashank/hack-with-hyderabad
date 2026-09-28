@@ -246,16 +246,153 @@
       align-items: start;
     }
 
-    /* FEED COLUMN */
+    .left-column {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* FEED & FORM PANELS */
     .feed-panel {
       background: var(--bg-card);
       border: 1px solid var(--border-color);
       border-radius: 16px;
       padding: 20px;
       backdrop-filter: blur(12px);
-      max-height: 800px;
+      max-height: 520px;
       display: flex;
       flex-direction: column;
+    }
+
+    .form-panel {
+      max-height: none;
+    }
+
+    .form-group {
+      margin-bottom: 12px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 5px;
+    }
+
+    .form-label .req {
+      color: var(--accent-rose);
+    }
+
+    .form-label .opt {
+      color: var(--text-dim);
+      font-size: 10px;
+      text-transform: none;
+    }
+
+    .form-input, .form-textarea {
+      width: 100%;
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 8px;
+      color: var(--text-main);
+      padding: 9px 12px;
+      font-size: 13px;
+      font-family: var(--font-sans);
+      transition: all 0.2s ease;
+    }
+
+    .form-input.font-mono {
+      font-family: var(--font-mono);
+      font-size: 12px;
+    }
+
+    .form-textarea {
+      resize: vertical;
+      min-height: 56px;
+    }
+
+    .form-input:focus, .form-textarea:focus {
+      outline: none;
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 12px rgba(6, 182, 212, 0.25);
+    }
+
+    .form-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .btn-block {
+      width: 100%;
+      justify-content: center;
+    }
+
+    .tag-live {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      color: #34d399;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .quick-examples {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn-link {
+      background: none;
+      border: none;
+      color: var(--accent-cyan);
+      font-size: 11px;
+      cursor: pointer;
+      text-decoration: underline;
+      padding: 2px 4px;
+    }
+
+    .btn-link:hover {
+      color: #fff;
+    }
+
+    .telemetry-meta-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-top: 12px;
+      font-size: 12px;
+    }
+
+    .meta-box {
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 8px;
+      padding: 8px 12px;
+    }
+
+    .meta-box-label {
+      font-size: 10px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 4px;
+    }
+
+    .meta-box-val {
+      color: var(--text-main);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      word-break: break-all;
     }
 
     .panel-header {
@@ -552,14 +689,54 @@
 
     <!-- MAIN WORKSPACE -->
     <div class="workspace">
-      <!-- INCIDENTS FEED -->
-      <div class="feed-panel">
-        <div class="panel-header">
-          <h2>Synthetic Telemetry Feed</h2>
-          <span id="incidentCount" style="font-size: 12px; color: var(--text-dim);">12 alerts</span>
+      <!-- LEFT COLUMN: USER INPUT & SYNTHETIC TELEMETRY -->
+      <div class="left-column">
+        <!-- USER INPUT PANEL: ANALYZE NEW INCIDENT -->
+        <div class="feed-panel form-panel" id="userInputPanel">
+          <div class="panel-header">
+            <h2>✍️ Analyze New Incident</h2>
+            <span class="tag-live">Operator Input</span>
+          </div>
+          <form id="incidentForm" onsubmit="handleUserIncidentSubmit(event)">
+            <div class="form-group">
+              <label class="form-label" for="inputService">Service <span class="req">*</span></label>
+              <input type="text" id="inputService" class="form-input" placeholder="e.g. billing-processor, orders-api" required autocomplete="off">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="inputErrorSig">Error Signature <span class="req">*</span></label>
+              <input type="text" id="inputErrorSig" class="form-input font-mono" placeholder="e.g. KafkaRebalanceException: partition assignment stalled" required autocomplete="off">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="inputSymptoms">Symptoms <span class="req">*</span></label>
+              <textarea id="inputSymptoms" class="form-textarea" rows="2" placeholder="e.g. Consumer lag spiked to 250k messages, invoices stuck in pending state" required></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="inputTimestamp">Timestamp <span class="opt">(optional - UTC generated if empty)</span></label>
+              <input type="text" id="inputTimestamp" class="form-input font-mono" placeholder="e.g. 2026-09-28T19:45:00Z">
+            </div>
+            <div class="form-actions">
+              <button type="submit" id="btnAnalyzeIncident" class="btn btn-primary btn-block">
+                ⚡ Analyze Incident
+              </button>
+              <div class="quick-examples">
+                <span style="font-size: 11px; color: var(--text-dim);">Quick Fill:</span>
+                <button type="button" class="btn-link" onclick="fillExample('novel')">Novel Incident</button>
+                <button type="button" class="btn-link" onclick="fillExample('repeat')">Repeat (Memory)</button>
+                <button type="button" class="btn-link" onclick="fillExample('cross_service')">Cross-Service</button>
+              </div>
+            </div>
+          </form>
         </div>
-        <div id="incidentList" class="incident-list">
-          <!-- Populated dynamically via JS -->
+
+        <!-- SYNTHETIC TELEMETRY FEED -->
+        <div class="feed-panel">
+          <div class="panel-header">
+            <h2>Synthetic Telemetry Feed</h2>
+            <span id="incidentCount" style="font-size: 12px; color: var(--text-dim);">12 alerts</span>
+          </div>
+          <div id="incidentList" class="incident-list">
+            <!-- Populated dynamically via JS -->
+          </div>
         </div>
       </div>
 
@@ -568,7 +745,7 @@
         <div class="empty-state" id="emptyState">
           <div class="empty-icon">🛡️</div>
           <h3>Agent Standing By</h3>
-          <p>Select any incident from the telemetry feed on the left,<br>or click <strong>"Run Guided Demo Sequence"</strong> above to walk through the complete hackathon narrative live.</p>
+          <p>Submit a new incident above, select an alert from the telemetry feed,<br>or click <strong>"Run Guided Demo Sequence"</strong> to watch the memory pipeline in action.</p>
         </div>
 
         <div class="pulse-loader" id="loadingState" style="display: none;">
@@ -644,6 +821,91 @@
       });
     }
 
+    function fillExample(type) {
+      const nowIso = new Date().toISOString();
+      if (type === 'novel') {
+        document.getElementById('inputService').value = 'billing-processor';
+        document.getElementById('inputErrorSig').value = 'KafkaRebalanceException: partition assignment stalled during offset commit timeout 45000ms';
+        document.getElementById('inputSymptoms').value = 'Consumer lag spiked to 250k messages, invoices stuck in pending status during month-end batch settlement';
+        document.getElementById('inputTimestamp').value = nowIso;
+      } else if (type === 'repeat') {
+        document.getElementById('inputService').value = 'billing-processor';
+        document.getElementById('inputErrorSig').value = 'KafkaRebalanceException: partition assignment stalled during offset commit timeout 45000ms';
+        document.getElementById('inputSymptoms').value = 'Consumer lag spiked again to 180k messages after worker restart';
+        document.getElementById('inputTimestamp').value = nowIso;
+      } else if (type === 'cross_service') {
+        document.getElementById('inputService').value = 'inventory-sync-service';
+        document.getElementById('inputErrorSig').value = 'KafkaRebalanceException: partition assignment stalled during offset commit timeout 45000ms';
+        document.getElementById('inputSymptoms').value = 'Inventory updates lagging by 120 minutes during flash sale catalog sync';
+        document.getElementById('inputTimestamp').value = nowIso;
+      }
+    }
+
+    async function handleUserIncidentSubmit(e) {
+      e.preventDefault();
+      const service = document.getElementById('inputService').value.trim();
+      const errorSig = document.getElementById('inputErrorSig').value.trim();
+      const symptoms = document.getElementById('inputSymptoms').value.trim();
+      const timestamp = document.getElementById('inputTimestamp').value.trim();
+
+      if (!service || !errorSig || !symptoms) {
+        alert('Please fill out all required fields: Service, Error Signature, and Symptoms.');
+        return;
+      }
+
+      // Deselect feed items
+      document.querySelectorAll('.incident-card').forEach(c => c.classList.remove('selected'));
+
+      // Show loader
+      document.getElementById('emptyState').style.display = 'none';
+      document.getElementById('resultState').style.display = 'none';
+      document.getElementById('loadingState').style.display = 'flex';
+      document.getElementById('loadingText').textContent = `Analyzing incident in ${service} via Hindsight & Groq...`;
+
+      const btn = document.getElementById('btnAnalyzeIncident');
+      btn.disabled = true;
+      btn.textContent = '⏳ Analyzing...';
+
+      const payload = {
+        service: service,
+        error_signature: errorSig,
+        symptoms: symptoms,
+        timestamp: timestamp || undefined
+      };
+
+      try {
+        const startTime = Date.now();
+        const res = await fetch('/api/handle_incident', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || `Server returned HTTP ${res.status}`);
+        }
+
+        const result = await res.json();
+        const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
+
+        // Fetch refreshed stats
+        const statsRes = await fetch('/api/stats');
+        const stats = await statsRes.json();
+        updateStats(stats);
+
+        // Render result
+        renderResult(result, payload, elapsed);
+      } catch (err) {
+        alert('Failed to analyze incident: ' + err.message);
+        document.getElementById('loadingState').style.display = 'none';
+        document.getElementById('emptyState').style.display = 'flex';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '⚡ Analyze Incident';
+      }
+    }
+
     async function handleIncidentClick(incident) {
       // Highlight card
       document.querySelectorAll('.incident-card').forEach(c => c.classList.remove('selected'));
@@ -690,18 +952,26 @@
 
       let bannerClass = 'slow';
       let bannerIcon = '🔍';
-      let bannerTitle = 'New Diagnosis (Slow Path)';
+      let bannerTitle = 'New diagnosis';
 
       if (path === 'fast_path') {
         bannerClass = 'fast';
         bannerIcon = '🧠';
-        bannerTitle = 'Recalled from Hindsight Memory (Fast Path)';
+        bannerTitle = 'Recalled from memory';
       } else if (path === 'pattern_adapted_path') {
         bannerClass = 'adapted';
         bannerIcon = '🧬';
-        bannerTitle = 'Pattern Adapted from Memory (Cross-Service Match)';
+        bannerTitle = 'Pattern adapted from memory';
       } else {
-        bannerTitle = 'Novel Failure Diagnosed & Retained to Memory';
+        bannerTitle = 'New diagnosis';
+      }
+
+      // Memory reference representation
+      let memRefText = 'None (First-principles reasoning from scratch)';
+      if (result.referenced_memory && result.referenced_memory.length) {
+        memRefText = result.referenced_memory.join(', ');
+      } else if (diag.referenced_incident) {
+        memRefText = diag.referenced_incident;
       }
 
       const fixContent = diag.proven_fix || diag.adapted_fix || diag.recommended_fix || 'No fix provided';
@@ -716,12 +986,44 @@
         <div class="verdict-banner ${bannerClass}">
           <div class="verdict-badge">
             <span>${bannerIcon}</span>
-            <span>${bannerTitle}</span>
+            <span>${result.tag || `${bannerIcon} ${bannerTitle}`}</span>
           </div>
           <div class="meta-pills">
-            <span class="meta-pill">⚡ ${result.elapsed_seconds || clientElapsed}s</span>
-            <span class="meta-pill">Service: ${incident.service}</span>
-            <span class="meta-pill">Conf: ${diag.confidence || 'high'}</span>
+            <span class="meta-pill">⚡ ${result.elapsed_seconds || clientElapsed}s latency</span>
+            <span class="meta-pill">Service: ${result.service || incident.service}</span>
+            <span class="meta-pill">Path: ${result.path_taken || path}</span>
+            <span class="meta-pill">Match: ${result.match_classification || 'N/A'}</span>
+          </div>
+        </div>
+
+        <!-- INCIDENT TELEMETRY & ATTRIBUTION CARD -->
+        <div class="section-card">
+          <div class="section-title" style="color: var(--accent-cyan);">🔎 Incident Telemetry & Memory Context</div>
+          <div class="telemetry-meta-grid">
+            <div class="meta-box">
+              <div class="meta-box-label">Incident ID</div>
+              <div class="meta-box-val" style="color: var(--accent-cyan); font-weight: 700;">${result.incident_id || incident.incident_id || 'USER-GENERATED'}</div>
+            </div>
+            <div class="meta-box">
+              <div class="meta-box-label">Target Service</div>
+              <div class="meta-box-val">${result.service || incident.service}</div>
+            </div>
+            <div class="meta-box">
+              <div class="meta-box-label">Match Classification</div>
+              <div class="meta-box-val" style="text-transform: uppercase;">${result.match_classification || 'N/A'}</div>
+            </div>
+            <div class="meta-box">
+              <div class="meta-box-label">Memory References</div>
+              <div class="meta-box-val" style="color: #a5b4fc;">${memRefText}</div>
+            </div>
+          </div>
+          <div style="margin-top: 10px;">
+            <div class="meta-box-label">Error Signature</div>
+            <div class="meta-box-val" style="background: rgba(0,0,0,0.3); padding: 6px 10px; border-radius: 6px; margin-top: 4px;">${result.error_signature || incident.error_signature || 'N/A'}</div>
+          </div>
+          <div style="margin-top: 10px;">
+            <div class="meta-box-label">Reported Symptoms</div>
+            <div style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">${result.symptom || incident.symptom || incident.symptoms || 'N/A'}</div>
           </div>
         </div>
 
@@ -755,14 +1057,14 @@
       btn.disabled = true;
       btn.textContent = '⏳ Executing Narrative...';
 
-      // 4-step sequence from Section 6
-      const demoIds = ['INC-0001', 'INC-0002', 'INC-0006', 'INC-0011'];
+      // 5-step sequence matching CLI demo: INC-0001, INC-0002, INC-0006, INC-0011, INC-0012
+      const demoIds = ['INC-0001', 'INC-0002', 'INC-0006', 'INC-0011', 'INC-0012'];
       for (let i = 0; i < demoIds.length; i++) {
         const id = demoIds[i];
         const inc = incidentsData.find(item => item.incident_id === id);
         if (inc) {
           await handleIncidentClick(inc);
-          await new Promise(r => setTimeout(r, 2500));
+          await new Promise(r => setTimeout(r, 2000));
         }
       }
 

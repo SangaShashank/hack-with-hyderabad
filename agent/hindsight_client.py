@@ -112,11 +112,15 @@ class HindsightMemoryClient:
 
     def recall_incident_matches(
         self,
-        query: str,
+        query: Optional[str] = None,
         min_semantic_score: float = 0.5,
+        response: Optional[Any] = None,
     ) -> List[Dict[str, Any]]:
         """Recall memories and return parsed items with scores and tags."""
-        response = self.recall(query=query)
+        if response is None:
+            if not query:
+                return []
+            response = self.recall(query=query)
         matches = []
         for res in getattr(response, "results", []):
             raw_scores = getattr(res, "scores", None)

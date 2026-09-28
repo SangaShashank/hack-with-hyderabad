@@ -34,13 +34,14 @@ class IncidentDataset:
 
     def get_demo_sequence(self) -> List[Dict[str, Any]]:
         """
-        Returns the curated 4-incident demo sequence specified in Section 6:
+        Returns the curated 5-incident demo sequence:
         1. Incident #1 (payments-api DB pool exhaustion) - Slow path (reason from scratch)
         2. Incident #2 (auth-service memory leak) - Unrelated family, Slow path (learns new family)
         3. Incident #3 (orders-api DB pool exhaustion) - Cross-service variant of #1, Pattern Adaptation
         4. Incident #4 (payments-api DB pool recurrence) - Exact recurrence of #1, Fast path (Instant Recall)
+        5. Incident #5 (auth-service memory leak recurrence) - Exact recurrence of #2, Fast path (Instant Recall)
         """
-        seq_ids = ["INC-0001", "INC-0002", "INC-0006", "INC-0011"]
+        seq_ids = ["INC-0001", "INC-0002", "INC-0006", "INC-0011", "INC-0012"]
         result = []
         for inc_id in seq_ids:
             inc = self.get_by_id(inc_id)
